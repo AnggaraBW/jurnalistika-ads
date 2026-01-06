@@ -1,9 +1,24 @@
 import { FaNewspaper, FaQuestionCircle, FaChartLine, FaCalendarCheck, FaEye, FaGoogle } from 'react-icons/fa';
+import { Link } from "wouter";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export default function Landing() {
   const handleLogin = () => {
     window.location.href = '/api/login';
   };
+
+  const heroImages = [
+    { src: "/banner-ads.jpeg", alt: "Banner Ads Preview" },
+    { src: "/sidebar-ads.jpeg", alt: "Sidebar Ads Preview" },
+    { src: "/inline-article-ads.jpeg", alt: "Inline Article Ads Preview" },
+    { src: "/popup-ads.jpeg", alt: "Popup Ads Preview" },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -32,11 +47,12 @@ export default function Landing() {
         <div className="max-w-6xl w-full grid md:grid-cols-2 gap-12 items-center">
           {/* Left Column: Info */}
           <div className="space-y-6">
+
             <div>
               <h2 className="text-4xl font-serif font-bold text-foreground mb-4">Pasang Iklan di Jurnalistika.id</h2>
               <p className="text-lg text-muted-foreground">Platform periklanan profesional untuk menjangkau audiens Jurnalistika.id dengan mudah dan efektif.</p>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
@@ -47,7 +63,7 @@ export default function Landing() {
                   <p className="text-sm text-muted-foreground">Bayar per periode atau per tayangan sesuai kebutuhan kampanye Anda</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                   <FaCalendarCheck className="text-accent-foreground" />
@@ -57,7 +73,7 @@ export default function Landing() {
                   <p className="text-sm text-muted-foreground">Tentukan tanggal mulai dan berakhir iklan Anda dengan fleksibel</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                   <FaEye className="text-accent-foreground" />
@@ -71,8 +87,33 @@ export default function Landing() {
           </div>
 
           {/* Right Column: Login Form */}
-          <div className="bg-card rounded-lg border border-border p-8 shadow-lg">
-            <h3 className="text-2xl font-serif font-bold text-foreground mb-6">Masuk ke Akun Anda</h3>
+
+          {/* Hero Image Preview */}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <Carousel
+              className="w-full relative rounded-xl shadow-2xl border border-white/10 bg-card"
+              opts={{ align: "start", loop: true }}>
+              <CarouselContent>
+                {heroImages.map((image, index) => (
+                  <CarouselItem key={index}>
+                    <div className="p-1">
+                      <img
+                        src={image.src}
+                        alt={image.alt}
+                        className="w-full h-autom h-[300px] rounded-lg object-cover"
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
+            </Carousel>
+          </div>
+
+          <div className="bg-card rounded-lg border border-border p-8 shadow-lg col-span-2 col-start-2">
+            <h3 className="text-2xl font-serif font-bold text-center text-foreground mb-6">Masuk ke Akun Anda</h3>
 
             <div className="space-y-5">
               <button
@@ -86,7 +127,10 @@ export default function Landing() {
             </div>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Belum punya akun? Daftar otomatis saat login pertama kali
+              Belum punya akun?{' '}
+              <Link href="/register" className="text-primary hover:underline font-medium">
+                Daftar Sekarang
+              </Link>
             </p>
           </div>
         </div>

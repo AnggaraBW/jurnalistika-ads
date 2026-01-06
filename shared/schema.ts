@@ -48,6 +48,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  password: varchar("password"),
   role: userRoleEnum("role").notNull().default('advertiser'),
   companyName: varchar("company_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -155,6 +156,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   profileImageUrl: true,
+  password: true,
   role: true,
   companyName: true,
 });

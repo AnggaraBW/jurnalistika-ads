@@ -83,7 +83,7 @@ export async function setupAuth(app: Express) {
           profileImageUrl: profile.photos?.[0]?.value,
           access_token: accessToken,
           refresh_token: refreshToken,
-          expires_at: Date.now() + 3600 * 1000, // 1 hour from now
+          expires_at: Date.now() + 100 * 1000, // 1 hour from now
         };
         done(null, user);
       } catch (error) {

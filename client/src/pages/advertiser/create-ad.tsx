@@ -10,7 +10,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AdSlot } from "@shared/schema";
 import AdvertiserNav from "@/components/AdvertiserNav";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,13 +25,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Stepper } from "@/components/ui/stepper";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { UploadResult } from '@uppy/core';
-import { FaAd, FaArrowLeft, FaArrowRight, FaCloudUploadAlt, FaCheck, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import type { UploadResult } from "@uppy/core";
+import {
+  FaAd,
+  FaArrowLeft,
+  FaArrowRight,
+  FaCloudUploadAlt,
+  FaCheck,
+  FaCheckCircle,
+  FaTimesCircle,
+} from "react-icons/fa";
 import type { PutBlobResult } from "@vercel/blob";
 
 const formSchema = z.object({
-  adType: z.enum(['banner', 'sidebar', 'inline', 'popup']),
-  paymentType: z.enum(['period', 'view']),
+  adType: z.enum(["banner", "sidebar", "inline", "popup"]),
+  paymentType: z.enum(["period", "view"]),
   slotIds: z.array(z.string()).min(1, "Pilih minimal 1 slot iklan"),
   title: z.string().min(3, "Judul minimal 3 karakter"),
   imageUrl: z.string().optional(),
@@ -41,39 +56,46 @@ export default function CreateAd() {
   const { user } = useAuth();
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [slotTypeFilter, setSlotTypeFilter] = useState<string>("all");
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState<string>("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      adType: 'banner',
-      paymentType: 'period',
+      adType: "banner",
+      paymentType: "period",
       slotIds: [],
-      title: '',
-      imageUrl: '',
-      startDate: '',
-      endDate: '',
-      budget: '',
-      targetViews: '',
+      title: "",
+      imageUrl: "",
+      startDate: "",
+      endDate: "",
+      budget: "",
+      targetViews: "",
     },
   });
 
   const { data: slots = [] } = useQuery<AdSlot[]>({
-    queryKey: ['/api/ad-slots/available'],
+    queryKey: ["/api/ad-slots/available"],
   });
 
-  const adType = form.watch('adType');
-  const paymentType = form.watch('paymentType');
-  const slotIds = form.watch('slotIds');
+  const adType = form.watch("adType");
+  const paymentType = form.watch("paymentType");
+  const slotIds = form.watch("slotIds");
 
   // Fetch booked dates for ALL selected slots
-  const { data: allBookedDates = [] } = useQuery<Array<{ slotId: string; dates: Array<{ startDate: string; endDate: string; adId: string }> }>>({
-    queryKey: ['/api/ad-slots/booked-dates-multiple', slotIds],
+  const { data: allBookedDates = [] } = useQuery<
+    Array<{
+      slotId: string;
+      dates: Array<{ startDate: string; endDate: string; adId: string }>;
+    }>
+  >({
+    queryKey: ["/api/ad-slots/booked-dates-multiple", slotIds],
     queryFn: async () => {
       if (!slotIds || slotIds.length === 0) return [];
       const results = await Promise.all(
         slotIds.map(async (slotId) => {
           const res = await fetch(`/api/ad-slots/${slotId}/booked-dates`, {
-            credentials: 'include',
+            credentials: "include",
           });
           const dates = await res.json();
           return { slotId, dates };
@@ -83,16 +105,17 @@ export default function CreateAd() {
     },
     enabled: slotIds && slotIds.length > 0,
   });
-  const startDate = form.watch('startDate');
-  const endDate = form.watch('endDate');
-  const budget = form.watch('budget');
-  const title = form.watch('title');
-  const imageUrl = form.watch('imageUrl');
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  const budget = form.watch("budget");
+  const title = form.watch("title");
+  const imageUrl = form.watch("imageUrl");
 
   // Filter slots by ad type and slot type filter
   const filteredSlots = slots.filter((slot) => {
     const matchesAdType = slot.adType === adType;
-    const matchesFilter = slotTypeFilter === "all" || slot.adType === slotTypeFilter;
+    const matchesFilter =
+      slotTypeFilter === "all" || slot.adType === slotTypeFilter;
     return matchesAdType && matchesFilter;
   });
 
@@ -115,30 +138,30 @@ export default function CreateAd() {
 
   // Format Rupiah input
   const formatRupiah = (value: string) => {
-    const number = value.replace(/[^\d]/g, '');
-    return number.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const number = value.replace(/[^\d]/g, "");
+    return number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/[^\d]/g, '');
-    form.setValue('budget', rawValue);
+    const rawValue = e.target.value.replace(/[^\d]/g, "");
+    form.setValue("budget", rawValue);
   };
 
   // Check if date range conflicts with ANY booked dates from ALL selected slots
   const checkDateConflict = (start: string, end: string) => {
     if (!start || !end || allBookedDates.length === 0) return false;
-    
+
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     // Check if there's conflict in any selected slot
     return allBookedDates.some((slotData) => {
       return slotData.dates.some((booked) => {
         const bookedStart = new Date(booked.startDate);
         const bookedEnd = new Date(booked.endDate);
-        
+
         // Check if dates overlap
-        return (startDate <= bookedEnd && endDate >= bookedStart);
+        return startDate <= bookedEnd && endDate >= bookedStart;
       });
     });
   };
@@ -147,14 +170,34 @@ export default function CreateAd() {
 
   // Calculate cost estimation for ALL selected slots
   const calculateEstimate = () => {
-    if (!startDate || !endDate || !budget || !slotIds || slotIds.length === 0) {
-      return { days: 0, slotsCount: 0, pricePerSlotPerDay: 0, subtotal: 0, tax: 0, total: 0 };
+    if (
+      !startDate ||
+      !endDate ||
+      // !budget ||
+      !slotIds ||
+      slotIds.length === 0
+    ) {
+      return {
+        days: 0,
+        slotsCount: 0,
+        pricePerSlotPerDay: 0,
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      };
     }
 
     // Find all selected slots
     const selectedSlots = slots.filter((slot) => slotIds.includes(slot.id));
     if (selectedSlots.length === 0) {
-      return { days: 0, slotsCount: 0, pricePerSlotPerDay: 0, subtotal: 0, tax: 0, total: 0 };
+      return {
+        days: 0,
+        slotsCount: 0,
+        pricePerSlotPerDay: 0,
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      };
     }
 
     const start = new Date(startDate);
@@ -162,27 +205,28 @@ export default function CreateAd() {
     const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
     // Ensure at least 1 day even if start and end are the same
     const days = daysDiff <= 0 ? 1 : Math.ceil(daysDiff);
-    
+
     // Sum prices from ALL selected slots
     let totalPricePerDay = 0;
     for (const slot of selectedSlots) {
-      const pricePerDay = paymentType === 'period' 
-        ? parseFloat(slot.pricePerDay) 
-        : parseFloat(slot.pricePerView) * 1000;
+      const pricePerDay =
+        paymentType === "period"
+          ? parseFloat(slot.pricePerDay)
+          : parseFloat(slot.pricePerView) * 1000;
       totalPricePerDay += pricePerDay;
     }
-    
+
     const subtotal = totalPricePerDay * days;
     const tax = subtotal * 0.11;
     const total = subtotal + tax;
 
-    return { 
-      days, 
+    return {
+      days,
       slotsCount: selectedSlots.length,
       pricePerSlotPerDay: totalPricePerDay / selectedSlots.length,
       subtotal,
-      tax, 
-      total 
+      tax,
+      total,
     };
   };
 
@@ -207,9 +251,11 @@ export default function CreateAd() {
       return;
     }
 
-  const successfulFile = result.successful[0] as any;
-  const responseBody = successfulFile?.response?.body as PutBlobResult | undefined;
-  const blobUrl = responseBody?.url || successfulFile?.uploadURL;
+    const successfulFile = result.successful[0] as any;
+    const responseBody = successfulFile?.response?.body as
+      | PutBlobResult
+      | undefined;
+    const blobUrl = responseBody?.url || successfulFile?.uploadURL;
 
     if (!blobUrl) {
       toast({
@@ -219,18 +265,31 @@ export default function CreateAd() {
       });
       return;
     }
-
     setUploadedImageUrl(blobUrl);
     form.setValue("imageUrl", blobUrl);
     toast({
       title: "Berhasil",
       description: "Gambar berhasil diupload",
     });
+
+    // setTempImageUrl(blobUrl);
+    // setShowCropper(true);
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    setUploadedImageUrl(croppedImage);
+    form.setValue("imageUrl", croppedImage);
+    setShowCropper(false);
+    setTempImageUrl("");
+    toast({
+      title: "Berhasil",
+      description: "Gambar berhasil dipotong dan digunakan",
+    });
   };
 
   const createAdMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      const response = await apiRequest('POST', '/api/ads', {
+      const response = await apiRequest("POST", "/api/ads", {
         ...data,
         advertiserId: (user as any)?.id,
         estimatedCost: estimate.total.toString(),
@@ -244,7 +303,7 @@ export default function CreateAd() {
         title: "Berhasil",
         description: "Iklan berhasil dibuat dan menunggu persetujuan admin",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/ads/my-ads'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ads/my-ads"] });
       form.reset();
       setUploadedImageUrl("");
     },
@@ -260,7 +319,7 @@ export default function CreateAd() {
         }, 500);
         return;
       }
-      
+
       // Handle conflict error
       if (error.message && error.message.includes("tidak tersedia")) {
         toast({
@@ -286,7 +345,7 @@ export default function CreateAd() {
   // No auto-selection for multi-select - let user choose
   useEffect(() => {
     // Clear slotIds when adType changes
-    form.setValue('slotIds', []);
+    form.setValue("slotIds", []);
   }, [adType, form]);
 
   return (
@@ -295,8 +354,12 @@ export default function CreateAd() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <h2 className="text-3xl font-serif font-bold text-foreground mb-2">Buat Iklan Baru</h2>
-          <p className="text-muted-foreground">Lengkapi informasi di bawah untuk membuat kampanye iklan Anda</p>
+          <h2 className="text-3xl font-serif font-bold text-foreground mb-2">
+            Buat Iklan Baru
+          </h2>
+          <p className="text-muted-foreground">
+            Lengkapi informasi di bawah untuk membuat kampanye iklan Anda
+          </p>
         </div>
 
         {/* Stepper */}
@@ -309,7 +372,9 @@ export default function CreateAd() {
               <div className="lg:col-span-2 space-y-6">
                 {/* Ad Type Selection */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Pilih Jenis Iklan</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Pilih Jenis Iklan
+                  </h3>
                   <FormField
                     control={form.control}
                     name="adType"
@@ -322,23 +387,50 @@ export default function CreateAd() {
                             className="grid sm:grid-cols-2 gap-4"
                           >
                             {[
-                              { value: 'banner', label: 'Banner', icon: FaAd, desc: 'Iklan horizontal di bagian atas atau bawah halaman' },
-                              { value: 'sidebar', label: 'Sidebar', icon: FaAd, desc: 'Iklan vertikal di sisi kanan halaman' },
-                              { value: 'inline', label: 'Inline Article', icon: FaAd, desc: 'Iklan di tengah konten artikel' },
-                              { value: 'popup', label: 'Pop-up', icon: FaAd, desc: 'Iklan yang muncul di atas konten' },
+                              {
+                                value: "banner",
+                                label: "Banner",
+                                icon: FaAd,
+                                desc: "Iklan horizontal di bagian atas atau bawah halaman",
+                              },
+                              {
+                                value: "sidebar",
+                                label: "Sidebar",
+                                icon: FaAd,
+                                desc: "Iklan vertikal di sisi kanan halaman",
+                              },
+                              {
+                                value: "inline",
+                                label: "Inline Article",
+                                icon: FaAd,
+                                desc: "Iklan di tengah konten artikel",
+                              },
+                              {
+                                value: "popup",
+                                label: "Pop-up",
+                                icon: FaAd,
+                                desc: "Iklan yang muncul di atas konten",
+                              },
                             ].map((type) => (
                               <FormItem key={type.value}>
                                 <FormControl>
                                   <label className="relative cursor-pointer block">
-                                    <RadioGroupItem value={type.value} className="sr-only peer" />
+                                    <RadioGroupItem
+                                      value={type.value}
+                                      className="sr-only peer"
+                                    />
                                     <div className="p-4 border-2 border-border rounded-lg peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/50 transition-all">
                                       <div className="flex items-start space-x-3">
                                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                                           <type.icon className="text-primary" />
                                         </div>
                                         <div>
-                                          <h4 className="font-semibold text-foreground mb-1">{type.label}</h4>
-                                          <p className="text-sm text-muted-foreground">{type.desc}</p>
+                                          <h4 className="font-semibold text-foreground mb-1">
+                                            {type.label}
+                                          </h4>
+                                          <p className="text-sm text-muted-foreground">
+                                            {type.desc}
+                                          </p>
                                         </div>
                                       </div>
                                     </div>
@@ -356,7 +448,9 @@ export default function CreateAd() {
 
                 {/* Payment Type */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Tipe Pembayaran</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Tipe Pembayaran
+                  </h3>
                   <FormField
                     control={form.control}
                     name="paymentType"
@@ -371,16 +465,30 @@ export default function CreateAd() {
                             <FormItem>
                               <FormControl>
                                 <label className="relative cursor-pointer block">
-                                  <RadioGroupItem value="period" className="sr-only peer" />
+                                  <RadioGroupItem
+                                    value="period"
+                                    className="sr-only peer"
+                                  />
                                   <div className="p-5 border-2 border-border rounded-lg peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/50 transition-all">
                                     <div className="flex items-center justify-between mb-3">
-                                      <h4 className="font-semibold text-foreground">Per Periode</h4>
+                                      <h4 className="font-semibold text-foreground">
+                                        Per Periode
+                                      </h4>
                                       <FaAd className="text-primary" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground mb-2">Bayar berdasarkan durasi pemasangan</p>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      Bayar berdasarkan durasi pemasangan
+                                    </p>
                                     <div className="mt-4 pt-4 border-t border-border">
-                                      <p className="text-xs text-muted-foreground">Mulai dari</p>
-                                      <p className="text-2xl font-bold text-foreground font-mono">Rp 500K<span className="text-sm text-muted-foreground font-normal">/bulan</span></p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Mulai dari
+                                      </p>
+                                      <p className="text-2xl font-bold text-foreground font-mono">
+                                        Rp 500K
+                                        <span className="text-sm text-muted-foreground font-normal">
+                                          /bulan
+                                        </span>
+                                      </p>
                                     </div>
                                   </div>
                                 </label>
@@ -390,16 +498,30 @@ export default function CreateAd() {
                             <FormItem>
                               <FormControl>
                                 <label className="relative cursor-pointer block">
-                                  <RadioGroupItem value="view" className="sr-only peer" />
+                                  <RadioGroupItem
+                                    value="view"
+                                    className="sr-only peer"
+                                  />
                                   <div className="p-5 border-2 border-border rounded-lg peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/50 transition-all">
                                     <div className="flex items-center justify-between mb-3">
-                                      <h4 className="font-semibold text-foreground">Per View</h4>
+                                      <h4 className="font-semibold text-foreground">
+                                        Per View
+                                      </h4>
                                       <FaAd className="text-primary" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground mb-2">Bayar berdasarkan jumlah tayangan</p>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      Bayar berdasarkan jumlah tayangan
+                                    </p>
                                     <div className="mt-4 pt-4 border-t border-border">
-                                      <p className="text-xs text-muted-foreground">Mulai dari</p>
-                                      <p className="text-2xl font-bold text-foreground font-mono">Rp 50<span className="text-sm text-muted-foreground font-normal">/view</span></p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Mulai dari
+                                      </p>
+                                      <p className="text-2xl font-bold text-foreground font-mono">
+                                        Rp 50
+                                        <span className="text-sm text-muted-foreground font-normal">
+                                          /view
+                                        </span>
+                                      </p>
                                     </div>
                                   </div>
                                 </label>
@@ -415,9 +537,13 @@ export default function CreateAd() {
 
                 {/* Slot Selection with Checkbox */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Pilih Slot Iklan</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Pilih satu atau lebih slot untuk menempatkan iklan Anda</p>
-                  
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Pilih Slot Iklan
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pilih satu atau lebih slot untuk menempatkan iklan Anda
+                  </p>
+
                   <FormField
                     control={form.control}
                     name="slotIds"
@@ -425,7 +551,9 @@ export default function CreateAd() {
                       <FormItem>
                         <div className="space-y-3">
                           {filteredSlots.length === 0 ? (
-                            <p className="text-sm text-muted-foreground py-4">Tidak ada slot tersedia untuk jenis iklan ini</p>
+                            <p className="text-sm text-muted-foreground py-4">
+                              Tidak ada slot tersedia untuk jenis iklan ini
+                            </p>
                           ) : (
                             filteredSlots.map((slot) => (
                               <FormField
@@ -440,7 +568,9 @@ export default function CreateAd() {
                                         onCheckedChange={(checked) => {
                                           const newValue = checked
                                             ? [...(field.value || []), slot.id]
-                                            : (field.value || []).filter((id) => id !== slot.id);
+                                            : (field.value || []).filter(
+                                                (id) => id !== slot.id
+                                              );
                                           field.onChange(newValue);
                                         }}
                                         data-testid={`checkbox-slot-${slot.id}`}
@@ -450,12 +580,21 @@ export default function CreateAd() {
                                       <FormLabel className="font-normal cursor-pointer">
                                         <div className="flex items-center justify-between">
                                           <div>
-                                            <p className="font-medium text-foreground">{slot.name}</p>
+                                            <p className="font-medium text-foreground">
+                                              {slot.name}
+                                            </p>
                                             <p className="text-xs text-muted-foreground">
-                                              {paymentType === 'period' 
-                                                ? `Rp ${parseFloat(slot.pricePerDay).toLocaleString('id-ID')}/hari`
-                                                : `Rp ${parseFloat(slot.pricePerView).toLocaleString('id-ID')}/view`
-                                              }
+                                              {paymentType === "period"
+                                                ? `Rp ${parseFloat(
+                                                    slot.pricePerDay
+                                                  ).toLocaleString(
+                                                    "id-ID"
+                                                  )}/hari`
+                                                : `Rp ${parseFloat(
+                                                    slot.pricePerView
+                                                  ).toLocaleString(
+                                                    "id-ID"
+                                                  )}/view`}
                                             </p>
                                           </div>
                                           {slot.isAvailable ? (
@@ -484,7 +623,9 @@ export default function CreateAd() {
 
                 {/* Upload Ad Image */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Upload Gambar Iklan</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Upload Gambar Iklan
+                  </h3>
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
@@ -495,29 +636,39 @@ export default function CreateAd() {
                             <div>
                               {!uploadedImageUrl ? (
                                 <ObjectUploader
+                                  adType={adType}
                                   maxNumberOfFiles={1}
                                   maxFileSize={5242880}
-                                  onGetUploadParameters={handleGetUploadParameters}
+                                  onGetUploadParameters={
+                                    handleGetUploadParameters
+                                  }
                                   onComplete={handleUploadComplete}
                                   buttonClassName="w-full"
+                                  buttonVariant="unstyled"
                                 >
-                                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <div className="group border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted hover:border-primary/50 transition-colors cursor-pointer">
+                                    <div className="w-16 h-16 bg-muted group-hover:bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                                       <FaCloudUploadAlt className="text-3xl text-muted-foreground" />
                                     </div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Klik untuk upload</p>
-                                    <p className="text-xs text-muted-foreground">PNG, JPG, atau GIF (maks. 5MB)</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">
+                                      Klik untuk upload
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      PNG, JPG, atau GIF (maks. 5MB)
+                                    </p>
                                   </div>
                                 </ObjectUploader>
                               ) : (
                                 <div className="text-center p-4 bg-primary/5 border border-primary/20 rounded-lg">
                                   <FaCheck className="text-2xl text-primary mx-auto mb-2" />
-                                  <p className="text-sm text-foreground font-medium">Gambar berhasil diupload</p>
+                                  <p className="text-sm text-foreground font-medium">
+                                    Gambar berhasil diupload
+                                  </p>
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setUploadedImageUrl("");
-                                      form.setValue('imageUrl', '');
+                                      form.setValue("imageUrl", "");
                                     }}
                                     className="text-xs text-muted-foreground hover:text-foreground mt-2"
                                   >
@@ -533,12 +684,26 @@ export default function CreateAd() {
                     />
 
                     <div className="bg-muted/30 rounded-lg p-4">
-                      <p className="text-sm font-medium text-foreground mb-2">Ukuran yang Disarankan:</p>
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        Ukuran yang Disarankan:
+                      </p>
                       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                        <div><FaCheck className="inline text-primary mr-1" /> Banner: 728x90 px</div>
-                        <div><FaCheck className="inline text-primary mr-1" /> Sidebar: 300x250 px</div>
-                        <div><FaCheck className="inline text-primary mr-1" /> Inline: 336x280 px</div>
-                        <div><FaCheck className="inline text-primary mr-1" /> Pop-up: 480x320 px</div>
+                        <div>
+                          <FaCheck className="inline text-primary mr-1" />{" "}
+                          Banner: 728x90 px
+                        </div>
+                        <div>
+                          <FaCheck className="inline text-primary mr-1" />{" "}
+                          Sidebar: 300x250 px
+                        </div>
+                        <div>
+                          <FaCheck className="inline text-primary mr-1" />{" "}
+                          Inline: 336x280 px
+                        </div>
+                        <div>
+                          <FaCheck className="inline text-primary mr-1" />{" "}
+                          Pop-up: 480x320 px
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -546,7 +711,9 @@ export default function CreateAd() {
 
                 {/* Ad Details */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Detail Iklan</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Detail Iklan
+                  </h3>
                   <FormField
                     control={form.control}
                     name="title"
@@ -554,8 +721,8 @@ export default function CreateAd() {
                       <FormItem>
                         <FormLabel>Judul Iklan</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
+                          <Input
+                            {...field}
                             placeholder="Contoh: Promo Gadget Terbaru"
                             data-testid="input-ad-title"
                           />
@@ -568,7 +735,9 @@ export default function CreateAd() {
 
                 {/* Schedule & Budget */}
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Jadwal & Budget</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Jadwal & Budget
+                  </h3>
                   <div className="space-y-5">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <FormField
@@ -578,8 +747,8 @@ export default function CreateAd() {
                           <FormItem>
                             <FormLabel>Tanggal Mulai</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
+                              <Input
+                                {...field}
                                 type="date"
                                 data-testid="input-start-date"
                               />
@@ -596,8 +765,8 @@ export default function CreateAd() {
                           <FormItem>
                             <FormLabel>Tanggal Berakhir</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
+                              <Input
+                                {...field}
                                 type="date"
                                 data-testid="input-end-date"
                               />
@@ -610,13 +779,19 @@ export default function CreateAd() {
 
                     {/* Date Conflict Warning */}
                     {hasDateConflict && (
-                      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4" data-testid="alert-date-conflict">
+                      <div
+                        className="bg-destructive/10 border border-destructive/20 rounded-lg p-4"
+                        data-testid="alert-date-conflict"
+                      >
                         <div className="flex items-start space-x-3">
                           <FaTimesCircle className="text-destructive mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-sm font-medium text-destructive">Tanggal Tidak Tersedia</p>
+                            <p className="text-sm font-medium text-destructive">
+                              Tanggal Tidak Tersedia
+                            </p>
                             <p className="text-xs text-destructive/80 mt-1">
-                              Slot ini sudah dipesan untuk periode yang dipilih. Silakan pilih tanggal lain.
+                              Slot ini sudah dipesan untuk periode yang dipilih.
+                              Silakan pilih tanggal lain.
                             </p>
                           </div>
                         </div>
@@ -624,26 +799,47 @@ export default function CreateAd() {
                     )}
 
                     {/* Booked Dates Info for all selected slots */}
-                    {allBookedDates.length > 0 && allBookedDates.some(slot => slot.dates.length > 0) && (
-                      <div className="bg-muted/50 border border-border rounded-lg p-4">
-                        <p className="text-sm font-medium text-foreground mb-2">Periode yang Sudah Dipesan (Per Slot):</p>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {allBookedDates.map((slotData: any) => {
-                            const slot = slots.find(s => s.id === slotData.slotId);
-                            return slotData.dates.length > 0 ? (
-                              <div key={slotData.slotId} className="border-l-2 border-muted-foreground pl-2">
-                                <p className="text-xs font-medium text-foreground mb-1">{slot?.name}</p>
-                                {slotData.dates.map((booked: any, idx: number) => (
-                                  <div key={idx} className="text-xs text-muted-foreground">
-                                    {new Date(booked.startDate).toLocaleDateString('id-ID')} - {new Date(booked.endDate).toLocaleDateString('id-ID')}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null;
-                          })}
+                    {allBookedDates.length > 0 &&
+                      allBookedDates.some((slot) => slot.dates.length > 0) && (
+                        <div className="bg-muted/50 border border-border rounded-lg p-4">
+                          <p className="text-sm font-medium text-foreground mb-2">
+                            Periode yang Sudah Dipesan (Per Slot):
+                          </p>
+                          <div className="space-y-2 max-h-32 overflow-y-auto">
+                            {allBookedDates.map((slotData: any) => {
+                              const slot = slots.find(
+                                (s) => s.id === slotData.slotId
+                              );
+                              return slotData.dates.length > 0 ? (
+                                <div
+                                  key={slotData.slotId}
+                                  className="border-l-2 border-muted-foreground pl-2"
+                                >
+                                  <p className="text-xs font-medium text-foreground mb-1">
+                                    {slot?.name}
+                                  </p>
+                                  {slotData.dates.map(
+                                    (booked: any, idx: number) => (
+                                      <div
+                                        key={idx}
+                                        className="text-xs text-muted-foreground"
+                                      >
+                                        {new Date(
+                                          booked.startDate
+                                        ).toLocaleDateString("id-ID")}{" "}
+                                        -{" "}
+                                        {new Date(
+                                          booked.endDate
+                                        ).toLocaleDateString("id-ID")}
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     <FormField
                       control={form.control}
@@ -653,8 +849,10 @@ export default function CreateAd() {
                           <FormLabel>Budget Maksimal</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">Rp</span>
-                              <Input 
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                Rp
+                              </span>
+                              <Input
                                 value={formatRupiah(field.value)}
                                 onChange={handleBudgetChange}
                                 type="text"
@@ -664,13 +862,15 @@ export default function CreateAd() {
                               />
                             </div>
                           </FormControl>
-                          <p className="text-xs text-muted-foreground mt-2">Budget minimum: Rp 500.000</p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Budget minimum: Rp 500.000
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                    {paymentType === 'view' && (
+                    {paymentType === "view" && (
                       <FormField
                         control={form.control}
                         name="targetViews"
@@ -678,8 +878,8 @@ export default function CreateAd() {
                           <FormItem>
                             <FormLabel>Target Tayangan (opsional)</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
+                              <Input
+                                {...field}
                                 type="number"
                                 placeholder="100000"
                                 data-testid="input-target-views"
@@ -695,13 +895,17 @@ export default function CreateAd() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end pt-4">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={createAdMutation.isPending || hasDateConflict}
                     data-testid="button-submit-ad"
                     className="px-6"
                   >
-                    {createAdMutation.isPending ? 'Mengirim...' : hasDateConflict ? 'Tanggal Tidak Tersedia' : 'Submit Iklan'}
+                    {createAdMutation.isPending
+                      ? "Mengirim..."
+                      : hasDateConflict
+                      ? "Tanggal Tidak Tersedia"
+                      : "Submit Iklan"}
                     <FaArrowRight className="ml-2" />
                   </Button>
                 </div>
@@ -710,36 +914,66 @@ export default function CreateAd() {
               {/* Right Column: Summary */}
               <div className="space-y-6">
                 <Card className="p-6 sticky top-24">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Ketersediaan Slot</h3>
-                  
+                  <h3 className="text-lg font-semibold text-foreground mb-4">
+                    Ketersediaan Slot
+                  </h3>
+
                   {/* Slot Type Filter */}
-                  <Tabs value={slotTypeFilter} onValueChange={setSlotTypeFilter} className="mb-4">
-                    <TabsList className="grid w-full grid-cols-5" data-testid="tabs-slot-filter">
-                      <TabsTrigger value="all" data-testid="tab-all">Semua</TabsTrigger>
-                      <TabsTrigger value="banner" data-testid="tab-banner">Banner</TabsTrigger>
-                      <TabsTrigger value="sidebar" data-testid="tab-sidebar">Sidebar</TabsTrigger>
-                      <TabsTrigger value="inline" data-testid="tab-inline">Inline</TabsTrigger>
-                      <TabsTrigger value="popup" data-testid="tab-popup">Popup</TabsTrigger>
+                  <Tabs
+                    value={slotTypeFilter}
+                    onValueChange={setSlotTypeFilter}
+                    className="mb-4"
+                  >
+                    <TabsList
+                      className="grid w-full grid-cols-5"
+                      data-testid="tabs-slot-filter"
+                    >
+                      <TabsTrigger value="all" data-testid="tab-all">
+                        Semua
+                      </TabsTrigger>
+                      <TabsTrigger value="banner" data-testid="tab-banner">
+                        Banner
+                      </TabsTrigger>
+                      <TabsTrigger value="sidebar" data-testid="tab-sidebar">
+                        Sidebar
+                      </TabsTrigger>
+                      <TabsTrigger value="inline" data-testid="tab-inline">
+                        Inline
+                      </TabsTrigger>
+                      <TabsTrigger value="popup" data-testid="tab-popup">
+                        Popup
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
 
                   <div className="space-y-3">
                     {filteredSlots.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Tidak ada slot tersedia untuk jenis iklan ini</p>
+                      <p className="text-sm text-muted-foreground">
+                        Tidak ada slot tersedia untuk jenis iklan ini
+                      </p>
                     ) : (
                       filteredSlots.map((slot: any) => (
-                        <div key={slot.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div
+                          key={slot.id}
+                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                        >
                           <div>
-                            <p className="text-sm font-medium text-foreground">{slot.name}</p>
-                            <p className="text-xs text-muted-foreground">Posisi: {slot.position}</p>
+                            <p className="text-sm font-medium text-foreground">
+                              {slot.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Posisi: {slot.position}
+                            </p>
                           </div>
                           {slot.isAvailable ? (
                             <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                              <FaCheckCircle className="inline mr-1" />Tersedia
+                              <FaCheckCircle className="inline mr-1" />
+                              Tersedia
                             </span>
                           ) : (
                             <span className="px-2.5 py-1 bg-destructive/10 text-destructive text-xs font-medium rounded-full">
-                              <FaTimesCircle className="inline mr-1" />Penuh
+                              <FaTimesCircle className="inline mr-1" />
+                              Penuh
                             </span>
                           )}
                         </div>
@@ -750,30 +984,60 @@ export default function CreateAd() {
                   {estimate.total > 0 && (
                     <>
                       <div className="mt-5 pt-5 border-t border-border">
-                        <h4 className="text-sm font-semibold text-foreground mb-3">Estimasi Pembayaran</h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-3">
+                          Estimasi Pembayaran
+                        </h4>
                         <div className="space-y-2 mb-4">
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Jumlah Slot</span>
-                            <span className="font-medium text-foreground font-mono">{estimate.slotsCount} slot</span>
+                            <span className="text-muted-foreground">
+                              Jumlah Slot
+                            </span>
+                            <span className="font-medium text-foreground font-mono">
+                              {estimate.slotsCount} slot
+                            </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Durasi</span>
-                            <span className="font-medium text-foreground font-mono">{estimate.days} hari</span>
+                            <span className="text-muted-foreground">
+                              Durasi
+                            </span>
+                            <span className="font-medium text-foreground font-mono">
+                              {estimate.days} hari
+                            </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Subtotal</span>
-                            <span className="font-medium text-foreground font-mono">Rp {Math.round(estimate.subtotal).toLocaleString('id-ID')}</span>
+                            <span className="text-muted-foreground">
+                              Subtotal
+                            </span>
+                            <span className="font-medium text-foreground font-mono">
+                              Rp{" "}
+                              {Math.round(estimate.subtotal).toLocaleString(
+                                "id-ID"
+                              )}
+                            </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Pajak (11%)</span>
-                            <span className="font-medium text-foreground font-mono">Rp {Math.round(estimate.tax).toLocaleString('id-ID')}</span>
+                            <span className="text-muted-foreground">
+                              Pajak (11%)
+                            </span>
+                            <span className="font-medium text-foreground font-mono">
+                              Rp{" "}
+                              {Math.round(estimate.tax).toLocaleString("id-ID")}
+                            </span>
                           </div>
                         </div>
                         <div className="pt-3 border-t border-border">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-foreground">Total</span>
-                            <span className="text-2xl font-bold text-primary font-mono" data-testid="text-total-cost">
-                              Rp {Math.round(estimate.total).toLocaleString('id-ID')}
+                            <span className="text-sm font-semibold text-foreground">
+                              Total
+                            </span>
+                            <span
+                              className="text-2xl font-bold text-primary font-mono"
+                              data-testid="text-total-cost"
+                            >
+                              Rp{" "}
+                              {Math.round(estimate.total).toLocaleString(
+                                "id-ID"
+                              )}
                             </span>
                           </div>
                         </div>

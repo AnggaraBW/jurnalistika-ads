@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { FaNewspaper, FaThLarge, FaList, FaUsers, FaCog, FaBell, FaUserTie } from 'react-icons/fa';
+import { FaNewspaper, FaThLarge, FaList, FaUsers, FaCog, FaBell, FaUserTie, FaTh, FaAd } from 'react-icons/fa';
 import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminNav() {
@@ -47,7 +47,19 @@ export default function AdminNav() {
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   } transition-colors`}
                 >
-                  <FaNewspaper className="inline mr-2" />Ads
+                  <FaAd className="inline mr-2" />Ads
+                </a>
+              </Link>
+              <Link href="/categories">
+                <a 
+                  data-testid="link-admin-dashboard"
+                  className={`px-4 py-2 text-sm font-medium rounded-md ${
+                    location === '/categories' 
+                      ? 'text-foreground bg-accent/10' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  } transition-colors`}
+                >
+                  <FaTh className="inline mr-2" />Categories
                 </a>
               </Link>
             </div>

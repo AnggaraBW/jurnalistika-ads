@@ -13,8 +13,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
+      const userId = req?.user?.id ?? null;
+      const user = userId ? await storage.getUser(userId) : null;
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -44,9 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ uploadURL });
   });
 
-  app.post(
-    "/api/blob/upload",
-    isAuthenticated,
+  app.post("/api/blob/upload", isAuthenticated,
     raw({
       type: [
         "application/octet-stream",

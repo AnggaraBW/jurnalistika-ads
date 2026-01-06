@@ -252,7 +252,7 @@ export default function AdminDashboard() {
             {/* All Ads */}
             <Card>
               <div className="p-6 border-b border-border">
-                <h3 className="text-lg font-semibold text-foreground">Iklan yang Sedang Tayang</h3>
+                <h3 className="text-lg font-semibold text-foreground">Iklan Aktif</h3>
               </div>
               <div className="overflow-x-auto">
                 {loadingAll ? (
