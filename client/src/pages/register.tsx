@@ -22,12 +22,13 @@ const registerSchema = z.object({
     lastName: z.string().min(2, "Nama belakang minimal 2 karakter"),
     companyName: z.string().min(2, "Nama perusahaan minimal 2 karakter"),
     email: z.string().email("Email tidak valid"),
-    password: z.string().min(8, "Password minimal 8 karakter"),
-    confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Password tidak cocok",
-    path: ["confirmPassword"],
-});
+    // password: z.string().min(8, "Password minimal 8 karakter"),
+    // confirmPassword: z.string()
+})
+// .refine((data) => data.password === data.confirmPassword, {
+//     message: "Password tidak cocok",
+//     path: ["confirmPassword"],
+// });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -43,29 +44,29 @@ export default function Register() {
             lastName: "",
             companyName: "",
             email: "",
-            password: "",
-            confirmPassword: "",
+            // password: "",
+            // confirmPassword: "",
         },
     });
 
     async function onSubmit(data: RegisterFormValues) {
         setIsLoading(true);
         try {
-            const response = await fetch("/api/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
+            // const response = await fetch("/api/register", {
+            //     method: "POST",
+            //     headers: { "Content-Type": "application/json" },
+            //     body: JSON.stringify(data),
+            // });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Gagal mendaftar");
-            }
+            // if (!response.ok) {
+            //     const errorData = await response.json();
+            //     throw new Error(errorData.message || "Gagal mendaftar");
+            // }
 
-            toast({
-                title: "Pendaftaran Berhasil",
-                description: "Silakan login dengan akun yang baru Anda buat.",
-            });
+            // toast({
+            //     title: "Pendaftaran Berhasil",
+            //     description: "Silakan login dengan akun yang baru Anda buat.",
+            // });
 
             setLocation("/login"); // Or wherever login page is, actually landing has the login button?
             // Since login is on landing, maybe redirect to landing?
@@ -170,7 +171,7 @@ export default function Register() {
                                     )}
                                 />
 
-                                <FormField
+                                {/* <FormField
                                     control={form.control}
                                     name="password"
                                     render={({ field }) => (
@@ -196,7 +197,7 @@ export default function Register() {
                                             <FormMessage />
                                         </FormItem>
                                     )}
-                                />
+                                /> */}
 
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? "Memproses..." : "Daftar Sekarang"}

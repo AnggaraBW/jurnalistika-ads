@@ -4,6 +4,8 @@ import AdvertiserNav from "@/components/AdvertiserNav";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FaImage, FaClock, FaCheckCircle, FaTimesCircle, FaPause } from 'react-icons/fa';
+import { Link } from "wouter";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 export default function MyAds() {
   const { data: ads = [], isLoading } = useQuery<AdWithRelations[]>({
@@ -47,7 +49,7 @@ export default function MyAds() {
             <FaImage className="text-6xl text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">Belum Ada Iklan</h3>
             <p className="text-muted-foreground mb-6">Anda belum membuat iklan apapun</p>
-            <a 
+            <a
               href="/advertiser/create-ad"
               data-testid="link-create-first-ad"
               className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md font-semibold hover:opacity-90 transition-opacity"
@@ -59,44 +61,59 @@ export default function MyAds() {
           <div className="space-y-4">
             {ads.map((ad: any) => (
               <Card key={ad.id} className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FaImage className="text-3xl text-muted-foreground" />
+                <Link href={"/advertiser/" + ad.id}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                          {ad.imageUrl ? (
+                            <AspectRatio
+                              className="flex justify-center items-center rounded-lg overflow-hidden"
+                              ratio={1 / 1}
+                            >
+                              <img
+                                className="w-full h-full object-cover"
+                                src={ad.imageUrl}
+                                alt="ad view"
+                              />
+                            </AspectRatio>
+                          ) : (
+                            <FaImage className="text-3xl text-muted-foreground" />
+                          )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-foreground mb-1" data-testid={`text-ad-title-${ad.id}`}>
+                          {ad.title}
+                        </h3>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
+                          <span className="capitalize" data-testid={`text-ad-slots-${ad.id}`}>
+                            {ad.slots?.map((s: any) => s.name).join(', ') || ad.adType}
+                          </span>
+                          <span>•</span>
+                          <span className="capitalize">{ad.paymentType}</span>
+                          <span>•</span>
+                          <span>{new Date(ad.startDate).toLocaleDateString('id-ID')} - {new Date(ad.endDate).toLocaleDateString('id-ID')}</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {getStatusBadge(ad.status)}
+                          <span className="text-sm text-muted-foreground">Views: {ad.currentViews.toLocaleString('id-ID')}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-foreground mb-1" data-testid={`text-ad-title-${ad.id}`}>
-                        {ad.title}
-                      </h3>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
-                        <span className="capitalize" data-testid={`text-ad-slots-${ad.id}`}>
-                          {ad.slots?.map((s: any) => s.name).join(', ') || ad.adType}
-                        </span>
-                        <span>•</span>
-                        <span className="capitalize">{ad.paymentType}</span>
-                        <span>•</span>
-                        <span>{new Date(ad.startDate).toLocaleDateString('id-ID')} - {new Date(ad.endDate).toLocaleDateString('id-ID')}</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        {getStatusBadge(ad.status)}
-                        <span className="text-sm text-muted-foreground">Views: {ad.currentViews.toLocaleString('id-ID')}</span>
-                      </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground mb-1">Budget</p>
+                      <p className="text-xl font-bold text-foreground font-mono">
+                        Rp {parseFloat(ad.budget).toLocaleString('id-ID')}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground mb-1">Budget</p>
-                    <p className="text-xl font-bold text-foreground font-mono">
-                      Rp {parseFloat(ad.budget).toLocaleString('id-ID')}
-                    </p>
-                  </div>
-                </div>
 
-                {ad.status === 'rejected' && ad.rejectionReason && (
-                  <div className="mt-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
-                    <p className="text-sm font-medium text-destructive mb-1">Alasan Penolakan:</p>
-                    <p className="text-sm text-muted-foreground">{ad.rejectionReason}</p>
-                  </div>
-                )}
+                  {ad.status === 'rejected' && ad.rejectionReason && (
+                    <div className="mt-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+                      <p className="text-sm font-medium text-destructive mb-1">Alasan Penolakan:</p>
+                      <p className="text-sm text-muted-foreground">{ad.rejectionReason}</p>
+                    </div>
+                  )}
+                </Link>
               </Card>
             ))}
           </div>

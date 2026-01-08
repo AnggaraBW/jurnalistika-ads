@@ -101,7 +101,7 @@ export default function Landing() {
                       <img
                         src={image.src}
                         alt={image.alt}
-                        className="w-full h-autom h-[300px] rounded-lg object-cover"
+                        className="w-full h-autom rounded-lg object-cover"
                       />
                     </div>
                   </CarouselItem>
@@ -126,12 +126,12 @@ export default function Landing() {
               </button>
             </div>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            {/* <p className="mt-6 text-center text-sm text-muted-foreground">
               Belum punya akun?{' '}
               <Link href="/register" className="text-primary hover:underline font-medium">
                 Daftar Sekarang
               </Link>
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

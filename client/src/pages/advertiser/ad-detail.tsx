@@ -1,4 +1,3 @@
-import AdminNav from "@/components/AdminNav";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
+import AdvertiserNav from "@/components/AdvertiserNav";
 
 export default function AdvertiserAdDetail() {
   const params = useParams();
@@ -87,8 +87,8 @@ export default function AdvertiserAdDetail() {
   };
 
   return (
-    <div className="min-h-screen">
-      <AdminNav />
+    <div className="min-h-screen bg-primary-800">
+      <AdvertiserNav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
@@ -271,7 +271,7 @@ export default function AdvertiserAdDetail() {
             </Card>
 
             {/* Advertiser Info */}
-            {ad.advertiser && (
+            {/* {ad.advertiser && (
               <Card className="p-6 mb-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">
                   Informasi Pengiklan
@@ -306,7 +306,7 @@ export default function AdvertiserAdDetail() {
                   </div>
                 </div>
               </Card>
-            )}
+            )} */}
 
             {/* Ad Slots */}
             {ad.slots && ad.slots.length > 0 && (

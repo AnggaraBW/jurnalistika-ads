@@ -2,8 +2,8 @@ import AdminNav from "@/components/AdminNav";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { AdWithRelations } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
+import { AdWithRelations, updateAdStatusSchema } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FaCheckCircle,
   FaClock,
@@ -13,12 +13,25 @@ import {
   FaDollarSign,
   FaEye,
   FaCalendar,
+  FaSpinner,
 } from "react-icons/fa";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminAdDetail() {
   const params = useParams();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: ad, isLoading } = useQuery<AdWithRelations>({
     queryKey: ["/api/ads/", params.id],
     queryFn: async () => {
@@ -28,54 +41,78 @@ export default function AdminAdDetail() {
     },
   });
 
+  const mutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const res = await apiRequest("PATCH", `/api/ads/${params.id}/status`, {
+        status: newStatus,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ads/", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ads/all"] });
+      toast({
+        title: "Status Berhasil Diperbarui",
+        description: "Status iklan telah berhasil diubah.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Gagal Memperbarui Status",
+        description: error.message,
+      });
+    },
+  });
+
   console.table(ad);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
         return (
-          <Badge className="bg-accent/10 text-accent">
+          <Badge variant="secondary" className="h-9 px-4 text-sm flex items-center justify-center bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-none">
             <FaClock className="inline mr-1" />
             Pending
           </Badge>
         );
       case "approved":
         return (
-          <Badge className="bg-primary/10 text-primary">
+          <Badge className="h-9 px-4 text-sm flex items-center justify-center bg-blue-100 text-blue-800 hover:bg-blue-100 border-none">
             <FaCheckCircle className="inline mr-1" />
             Disetujui
           </Badge>
         );
       case "active":
         return (
-          <Badge className="bg-primary/10 text-primary">
+          <Badge className="h-9 px-4 text-sm flex items-center justify-center bg-green-100 text-green-800 hover:bg-green-100 border-none">
             <FaCheckCircle className="inline mr-1" />
             Aktif
           </Badge>
         );
       case "rejected":
         return (
-          <Badge className="bg-destructive/10 text-destructive">
+          <Badge variant="destructive" className="h-9 px-4 text-sm flex items-center justify-centerh-9 px-4 text-sm flex items-center justify-center bg-red-100 text-red-800 hover:bg-red-100 border-none">
             <FaTimesCircle className="inline mr-1" />
             Ditolak
           </Badge>
         );
       case "paused":
         return (
-          <Badge className="bg-muted/50 text-muted-foreground">
+          <Badge variant="outline" className="h-9 px-4 text-sm flex items-center justify-center bg-gray-100 text-gray-800 border-none">
             <FaPause className="inline mr-1" />
             Dijeda
           </Badge>
         );
       case "completed":
         return (
-          <Badge className="bg-muted/50 text-muted-foreground">
+          <Badge variant="secondary" className="h-9 px-4 text-sm flex items-center justify-center bg-slate-100 text-slate-800 border-none">
             <FaCheckCircle className="inline mr-1" />
             Selesai
           </Badge>
         );
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge className="h-9 px-4 text-sm flex items-center justify-center">{status}</Badge>;
     }
   };
 
@@ -86,8 +123,12 @@ export default function AdminAdDetail() {
     }).format(value);
   };
 
+  const handleStatusChange = (value: string) => {
+    mutation.mutate(value);
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <AdminNav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -115,6 +156,7 @@ export default function AdminAdDetail() {
           </Card>
         ) : (
           <>
+            {/* Header with just Text */}
             <div className="mb-8">
               <h2 className="text-3xl font-serif font-bold text-foreground mb-2">
                 {ad.title}
@@ -145,20 +187,58 @@ export default function AdminAdDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               {/* Main Info */}
               <Card className="p-6 lg:col-span-2">
-                <h3 className="text-lg font-semibold text-foreground mb-4">
-                  Informasi Iklan
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Informasi Iklan
+                  </h3>
+                </div>
+
                 <div className="space-y-4">
                   {/* Status & Type */}
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-sm text-muted-foreground font-medium">
-                      Status:
-                    </span>
-                    {getStatusBadge(ad.status)}
-                    <span className="text-sm text-muted-foreground font-medium ml-4">
-                      Tipe Iklan:
-                    </span>
-                    <Badge variant="outline">{ad.adType}</Badge>
+                  <div className="flex flex-wrap gap-x-8 gap-y-4 items-center">
+                    <div>
+                      <span className="text-sm text-muted-foreground font-medium block mb-2">
+                        Status:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          defaultValue={ad.status}
+                          onValueChange={handleStatusChange}
+                          disabled={mutation.isPending}
+                        >
+                          <SelectTrigger className="w-[160px] h-9">
+                            <SelectValue placeholder="Pilih Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="approved">Disetujui</SelectItem>
+                            <SelectItem value="active">Aktif</SelectItem>
+                            <SelectItem value="paused">Dijeda</SelectItem>
+                            <SelectItem value="completed">Selesai</SelectItem>
+                            <SelectItem value="rejected">Ditolak</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {mutation.isPending && (
+                          <FaSpinner className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-sm text-muted-foreground font-medium">
+                        Status:
+                      </span>
+                      {getStatusBadge(ad.status)}
+                    </div>
+
+                    <div>
+                      <span className="text-sm text-muted-foreground font-medium block mb-2">
+                        Tipe Iklan:
+                      </span>
+                      <Badge variant="outline" className="h-9 px-4 text-sm flex items-center justify-center">
+                        {ad.adType}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Dates */}

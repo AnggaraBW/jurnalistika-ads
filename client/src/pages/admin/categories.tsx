@@ -23,6 +23,7 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { Textarea } from "@/components/ui/textarea";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 // Define the 4 default categories with icons and descriptions
 const DEFAULT_CATEGORIES = [
@@ -32,13 +33,17 @@ const DEFAULT_CATEGORIES = [
     description: "Full-width banner ads at top, bottom, or middle of pages",
     icon: FaTh,
     color: "bg-blue-50 text-blue-600",
+    src: "/banner-ads.jpeg",
+    alt: "Banner Ads Preview"
   },
   {
     id: "sidebar",
     label: "Sidebar",
     description: "Vertical sidebar ads positioned on the right side of content",
-    icon: FaHamburger,  
+    icon: FaHamburger,
     color: "bg-green-50 text-green-600",
+    src: "/sidebar-ads.jpeg",
+    alt: "Sidebar Ads Preview"
   },
   {
     id: "inline",
@@ -46,6 +51,8 @@ const DEFAULT_CATEGORIES = [
     description: "In-content ads placed within article text and feeds",
     icon: FaAlignLeft,
     color: "bg-purple-50 text-purple-600",
+    src: "/inline-article-ads.jpeg",
+    alt: "Inline Article Ads Preview"
   },
   {
     id: "popup",
@@ -53,6 +60,8 @@ const DEFAULT_CATEGORIES = [
     description: "Pop-up and modal ads for high-impact advertising",
     icon: FaWindowRestore,
     color: "bg-orange-50 text-orange-600",
+    src: "/popup-ads.jpeg",
+    alt: "Popup Ads Preview"
   },
 ];
 
@@ -61,6 +70,13 @@ interface CustomCategory {
   label: string;
   description: string;
 }
+
+const images = [
+  { src: "/banner-ads.jpeg", alt: "Banner Ads Preview" },
+  { src: "/sidebar-ads.jpeg", alt: "Sidebar Ads Preview" },
+  { src: "/inline-article-ads.jpeg", alt: "Inline Article Ads Preview" },
+  { src: "/popup-ads.jpeg", alt: "Popup Ads Preview" },
+]
 
 export default function AdminAdCategories() {
   const { toast } = useToast();
@@ -198,9 +214,16 @@ export default function AdminAdCategories() {
                   key={category.id}
                   className="p-6 hover:shadow-lg transition-shadow"
                 >
-                  <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <AspectRatio>
+                      <img
+                        src={category.src}
+                        alt={category.alt}
+                        className="w-full h-autom rounded-lg object-cover"
+                      />
+                    </AspectRatio>
                     <div className={`p-3 rounded-lg ${category.color}`}>
-                      <IconComponent className="w-6 h-6" />
+                      {/* <IconComponent className="w-6 h-6" /> */}
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground mb-1">
