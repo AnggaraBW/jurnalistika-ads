@@ -16,9 +16,11 @@ import {
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
 import AdvertiserNav from "@/components/AdvertiserNav";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdvertiserAdDetail() {
   const params = useParams();
+  const { toast } = useToast();
   const { data: ad, isLoading } = useQuery<AdWithRelations>({
     queryKey: ["/api/ads/", params.id],
     queryFn: async () => {
@@ -268,6 +270,46 @@ export default function AdvertiserAdDetail() {
                   </p>
                 </div>
               </div>
+              {ad.status === "approved" && (
+                <div className="mt-6 border border-dashed rounded-xl bg-primary/10 text-primary-foreground p-6 relative overflow-hidden">
+                  {/* <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-8 -translate-y-8 pointer-events-none">
+                    <FaDollarSign className="text-9xl" />
+                  </div> */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FaCheckCircle className="text-xl" />
+                    </div>
+                    <h4 className="text-lg font-bold">Siap untuk Ditayangkan!</h4>
+                  </div>
+
+                  <p className="text-primary-foreground/90 mb-5 text-sm leading-relaxed">
+                    Iklan Anda telah disetujui! Selesaikan pembayaran sekarang untuk segera menjangkau ribuan pembaca potensial Anda.
+                  </p>
+
+                  <div
+                    className="bg-white/50 rounded-lg p-4 backdrop-blur-sm border border-white/20 group cursor-pointer hover:bg-white/20 transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(ad.id.toUpperCase());
+                      toast({
+                        title: "Disalin!",
+                        description: "Nomor transaksi telah disalin ke clipboard.",
+                      });
+                    }}
+                  >
+                    <p className="text-xs text-primary-foreground/70 uppercase tracking-wider mb-1 font-medium flex justify-between">
+                      <span>Nomor Transaksi</span>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">Klik untuk menyalin</span>
+                    </p>
+                    <p className="text-2xl font-mono font-extrabold tracking-widest select-all">
+                      {ad.id.toUpperCase()}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-xs text-primary-foreground/80 font-medium">
+                    *Mohon sertakan nomor transaksi ini saat melakukan transfer
+                  </p>
+                </div>
+              )}
             </Card>
 
             {/* Advertiser Info */}
