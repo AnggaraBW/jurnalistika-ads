@@ -16,7 +16,8 @@ import AdminAdDetail from "./pages/admin/ad-detail";
 import AdminNotifications from "./pages/admin/notifications";
 import AdvertiserAdDetail from "./pages/advertiser/ad-detail";
 import { useEffect } from "react";
-import AdminAdCategories from "./pages/admin/categories";
+import AdminAdSlotsVisual from "./pages/admin/categories";
+import AdminAdSlotsList from "./pages/admin/category-ad-slots";
 
 function Router() {
   const { error, isAuthenticated, isLoading, user } = useAuth();
@@ -68,7 +69,8 @@ function Router() {
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/ads" component={AdminAds} />
         <Route path="/ads/:id" component={AdminAdDetail} />
-        <Route path="/categories" component={AdminAdCategories} />
+        <Route path="/categories" component={AdminAdSlotsVisual} />
+        <Route path="/ad-categories/:category/slots" component={AdminAdSlotsList} />
         <Route path="/notifications" component={AdminNotifications} />
         <Route component={NotFound} />
       </Switch>

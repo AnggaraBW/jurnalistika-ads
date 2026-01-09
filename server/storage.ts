@@ -4,6 +4,7 @@ import {
   ads,
   adViews,
   adSlotBookings,
+  notifications,
   type User,
   type UpsertUser,
   type AdSlot,
@@ -15,6 +16,9 @@ import {
   type UpdateAdStatus,
   type InsertAdView,
   type AdView,
+  type UpdateAdSlot,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, sql, desc, count, inArray } from "drizzle-orm";
@@ -23,14 +27,15 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Ad Slot operations
   getAdSlots(): Promise<AdSlot[]>;
   getAvailableAdSlots(): Promise<AdSlot[]>;
   getAdSlotById(id: string): Promise<AdSlot | undefined>;
   createAdSlot(slot: InsertAdSlot): Promise<AdSlot>;
+  updateAdSlot(id: string, slot: UpdateAdSlot): Promise<AdSlot>;
   updateAdSlotAvailability(id: string, isAvailable: number): Promise<void>;
-  
+
   // Ad operations
   createAd(ad: InsertAd): Promise<Ad>;
   getAdById(id: string): Promise<AdWithRelations | undefined>;
@@ -40,7 +45,7 @@ export interface IStorage {
   getAllAds(): Promise<AdWithRelations[]>;
   updateAdStatus(id: string, data: UpdateAdStatus): Promise<Ad>;
   updateAdViews(id: string, views: number): Promise<void>;
-  
+
   // View tracking
   trackAdView(adId: string, ipAddress?: string, userAgent?: string, referrer?: string): Promise<AdView>;
   getAdAnalytics(adId: string): Promise<{
@@ -50,11 +55,11 @@ export interface IStorage {
     viewsThisMonth: number;
   }>;
   getAdvertiserAdsWithAnalytics(advertiserId: string): Promise<AdWithAnalytics[]>;
-  
+
   // Booking conflict checking
   getBookedDatesForSlot(slotId: string): Promise<Array<{ startDate: Date; endDate: Date; adId: string }>>;
   checkSlotAvailability(slotId: string, startDate: Date, endDate: Date): Promise<boolean>;
-  
+
   // Statistics
   getStatistics(): Promise<{
     pendingCount: number;
@@ -62,6 +67,13 @@ export interface IStorage {
     advertiserCount: number;
     monthlyRevenue: string;
   }>;
+
+  // Notifications
+  getNotifications(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(id: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getAdmins(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -105,6 +117,15 @@ export class DatabaseStorage implements IStorage {
     return newSlot;
   }
 
+  async updateAdSlot(id: string, slot: UpdateAdSlot): Promise<AdSlot> {
+    const [updatedSlot] = await db
+      .update(adSlots)
+      .set({ ...slot })
+      .where(eq(adSlots.id, id))
+      .returning();
+    return updatedSlot;
+  }
+
   async updateAdSlotAvailability(id: string, isAvailable: number): Promise<void> {
     await db.update(adSlots).set({ isAvailable }).where(eq(adSlots.id, id));
   }
@@ -113,10 +134,10 @@ export class DatabaseStorage implements IStorage {
   async createAd(ad: InsertAd): Promise<Ad> {
     // Extract slotIds and create ad without it
     const { slotIds, ...adData } = ad;
-    
+
     // Create the ad
     const [newAd] = await db.insert(ads).values(adData as any).returning();
-    
+
     // Create bookings for all selected slots
     if (slotIds && slotIds.length > 0) {
       await db.insert(adSlotBookings).values(
@@ -126,7 +147,7 @@ export class DatabaseStorage implements IStorage {
         }))
       );
     }
-    
+
     return newAd;
   }
 
@@ -462,7 +483,7 @@ export class DatabaseStorage implements IStorage {
     currentMonth.setHours(0, 0, 0, 0);
 
     const [revenueResult] = await db
-      .select({ 
+      .select({
         total: sql<string>`COALESCE(SUM(${ads.actualCost}), 0)::text`
       })
       .from(ads)
@@ -479,6 +500,41 @@ export class DatabaseStorage implements IStorage {
       advertiserCount: advertiserResult?.count || 0,
       monthlyRevenue: revenueResult?.total || '0',
     };
+  }
+
+  // Notifications
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: 1 })
+      .where(eq(notifications.id, id));
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: 1 })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return newNotification;
+  }
+
+  async getAdmins(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, 'admin'));
   }
 }
 

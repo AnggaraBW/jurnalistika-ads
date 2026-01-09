@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema } from "@shared/schema";
+import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema, updateAdSlotSchema } from "@shared/schema";
 import { put } from "@vercel/blob";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -137,6 +137,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/ad-slots/:id", isAuthenticated, async (req: any, res) => {
+    const user = await storage.getUser(req.user.id);
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden: Admin only" });
+    }
+
+    try {
+      const validatedData = updateAdSlotSchema.parse(req.body);
+      const slot = await storage.updateAdSlot(req.params.id, validatedData);
+      res.json(slot);
+    } catch (error) {
+      console.error("Error updating ad slot:", error);
+      res.status(400).json({ message: "Invalid ad slot data" });
+    }
+  });
+
+  app.patch("/api/ad-slots")
+
   // Ad endpoints
   app.post("/api/ads", isAuthenticated, async (req: any, res) => {
     try {
@@ -149,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate dates
       const startDate = new Date(validatedData.startDate);
       const endDate = new Date(validatedData.endDate);
-      
+
       if (startDate > endDate) {
         return res.status(400).json({ message: "Start date must be before or equal to end date" });
       }
@@ -163,7 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate and sanitize slot IDs - remove duplicates
       const slotIds = validatedData.slotIds || [];
       const uniqueSlotIds = Array.from(new Set(slotIds));
-      
+
+      // Validate slot IDs
       if (uniqueSlotIds.length === 0) {
         return res.status(400).json({ message: "At least one slot must be selected" });
       }
@@ -185,8 +204,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check that all slots have the same adType as the ad
       const invalidSlots = selectedSlots.filter(slot => slot && slot.adType !== validatedData.adType);
       if (invalidSlots.length > 0) {
-        return res.status(400).json({ 
-          message: `All selected slots must match the ad type "${validatedData.adType}". Invalid slots: ${invalidSlots.map(s => s!.name).join(', ')}` 
+        return res.status(400).json({
+          message: `All selected slots must match the ad type "${validatedData.adType}". Invalid slots: ${invalidSlots.map(s => s!.name).join(', ')}`
         });
       }
 
@@ -201,8 +220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!isAvailable) {
           // Get slot name for better error message
           const slot = await storage.getAdSlotById(slotId);
-          return res.status(409).json({ 
-            message: `Slot "${slot?.name || slotId}" tidak tersedia untuk tanggal yang dipilih. Sudah ada iklan lain yang memesan slot ini pada periode tersebut.` 
+          return res.status(409).json({
+            message: `Slot "${slot?.name || slotId}" tidak tersedia untuk tanggal yang dipilih. Sudah ada iklan lain yang memesan slot ini pada periode tersebut.`
           });
         }
       }
@@ -214,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       let totalBaseCost = 0;
-      
+
       if (validatedData.paymentType === 'period') {
         // Sum up daily rates for all selected slots
         for (const slot of selectedSlots) {
@@ -254,6 +273,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const ad = await storage.createAd(validatedData);
+
+      // Notify admins
+      const currentUser = await storage.getUser(userId);
+      const admins = await storage.getAdmins();
+
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Booking Iklan Baru",
+          message: `Booking baru "${ad.title}" dari ${currentUser?.firstName || currentUser?.companyName || 'Advertiser'} menunggu persetujuan.`,
+          type: "info",
+        });
+      }
+
       res.json(ad);
     } catch (error) {
       console.error("Error creating ad:", error);
@@ -350,6 +383,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = updateAdStatusSchema.parse(req.body);
       const ad = await storage.updateAdStatus(req.params.id, validatedData);
+
+      // Notify advertiser
+      let message = `Status iklan "${ad.title}" Anda telah diperbarui menjadi ${ad.status}.`;
+      if (ad.status === 'rejected' && ad.rejectionReason) {
+        message += ` Alasan: ${ad.rejectionReason}`;
+      } else if (ad.status === 'approved') {
+        message = `Iklan "${ad.title}" telah disetujui.`;
+      }
+
+      await storage.createNotification({
+        userId: ad.advertiserId,
+        title: "Update Status Iklan",
+        message: message,
+        type: ad.status === 'rejected' ? 'error' : 'success',
+      });
+
       res.json(ad);
     } catch (error) {
       console.error("Error updating ad status:", error);
@@ -410,6 +459,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching ad analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      // Verify ownership
+      const notifications = await storage.getNotifications(userId);
+      const notification = notifications.find(n => n.id === id);
+
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+
+      await storage.markNotificationAsRead(id);
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to update notification" });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to update notifications" });
     }
   });
 

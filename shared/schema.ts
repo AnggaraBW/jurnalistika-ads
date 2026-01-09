@@ -150,6 +150,24 @@ export const adViewsRelations = relations(adViews, ({ one }) => ({
   }),
 }));
 
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull().default('info'),
+  isRead: integer("is_read").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
@@ -172,6 +190,9 @@ export const upsertUserSchema = createInsertSchema(users).pick({
 export const insertAdSlotSchema = createInsertSchema(adSlots).omit({
   id: true,
   createdAt: true,
+}).extend({
+  name: z.string().min(1, "Name is required"),
+  location: z.string().min(1, "Location is required"),
 });
 
 export const insertAdSchema = createInsertSchema(ads).omit({
@@ -204,7 +225,20 @@ export const updateAdStatusSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
-// Types
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  isRead: true,
+});
+
+export const updateAdSlotSchema = createInsertSchema(adSlots).omit({
+  id: true,
+  createdAt: true,
+}).partial().extend({
+  name: z.string().min(1, "Name is required"),
+  location: z.string().min(1, "Location is required"),
+});
+
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -217,6 +251,9 @@ export type InsertAdSlotBooking = z.infer<typeof insertAdSlotBookingSchema>;
 export type AdView = typeof adViews.$inferSelect;
 export type InsertAdView = z.infer<typeof insertAdViewSchema>;
 export type UpdateAdStatus = z.infer<typeof updateAdStatusSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type UpdateAdSlot = z.infer<typeof updateAdSlotSchema>;
 
 // Extended types with relations
 export type AdWithRelations = Ad & {

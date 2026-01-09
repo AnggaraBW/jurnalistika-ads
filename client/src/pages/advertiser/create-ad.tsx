@@ -536,9 +536,9 @@ export default function CreateAd() {
                 </Card>
 
                 {/* Slot Selection with Checkbox */}
-                <Card className="p-6">
+                <Card className={"p-6" + (filteredSlots.length === 0 ? ' bg-red-100' : '')}>
                   <h3 className="text-lg font-semibold text-foreground mb-4">
-                    Pilih Slot Iklan
+                    {filteredSlots.length === 0 ? 'Tidak ada slot tersedia' : 'Pilih Slot Iklan'}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     Pilih satu atau lebih slot untuk menempatkan iklan Anda
