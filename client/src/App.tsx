@@ -18,6 +18,10 @@ import AdvertiserAdDetail from "./pages/advertiser/ad-detail";
 import { useEffect } from "react";
 import AdminAdSlotsVisual from "./pages/admin/categories";
 import AdminAdSlotsList from "./pages/admin/category-ad-slots";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import Contact from "@/pages/contact";
+import Help from "@/pages/help";
 
 function Router() {
   const { error, isAuthenticated, isLoading, user } = useAuth();
@@ -55,6 +59,10 @@ function Router() {
     return (
       <Switch>
         <Route path="/register" component={Register} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/help" component={Help} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
