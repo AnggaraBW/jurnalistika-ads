@@ -8,10 +8,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { Notification } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export function NotificationPopover() {
     const [open, setOpen] = useState(false);
     const queryClient = useQueryClient();
+    const [, setLocation] = useLocation();
+    const { user } = useAuth();
 
     const { data: notifications = [], isLoading } = useQuery<Notification[]>({
         queryKey: ["/api/notifications"],
@@ -45,6 +49,21 @@ export function NotificationPopover() {
 
     const handleMarkAllRead = () => {
         markAllReadMutation.mutate();
+    };
+
+    const handleNotificationClick = (notification: Notification) => {
+        if (!notification.isRead) {
+            handleMarkRead(notification.id);
+        }
+        setOpen(false);
+
+        if (notification.adId) {
+            if (user?.role === 'admin') {
+                setLocation(`/ads/${notification.adId}`);
+            } else {
+                setLocation(`/advertiser/${notification.adId}`);
+            }
+        }
     };
 
     return (
@@ -90,7 +109,7 @@ export function NotificationPopover() {
                                     key={notification.id}
                                     className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${!notification.isRead ? "bg-muted/20" : ""
                                         }`}
-                                    onClick={() => !notification.isRead && handleMarkRead(notification.id)}
+                                    onClick={() => handleNotificationClick(notification)}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${!notification.isRead ? "bg-primary" : "bg-transparent"

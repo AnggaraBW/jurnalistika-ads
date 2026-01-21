@@ -154,6 +154,7 @@ export const adViewsRelations = relations(adViews, ({ one }) => ({
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  adId: varchar("ad_id").references(() => ads.id, { onDelete: 'cascade' }),
   title: varchar("title").notNull(),
   message: text("message").notNull(),
   type: varchar("type").notNull().default('info'),

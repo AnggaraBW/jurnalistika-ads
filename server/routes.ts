@@ -281,10 +281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const admin of admins) {
         await storage.createNotification({
           userId: admin.id,
+          adId: ad.id,
           title: "Booking Iklan Baru",
           message: `Booking baru "${ad.title}" dari ${currentUser?.firstName || currentUser?.companyName || 'Advertiser'} menunggu persetujuan.`,
           type: "info",
         });
+
       }
 
       res.json(ad);
@@ -394,6 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.createNotification({
         userId: ad.advertiserId,
+        adId: ad.id,
         title: "Update Status Iklan",
         message: message,
         type: ad.status === 'rejected' ? 'error' : 'success',
