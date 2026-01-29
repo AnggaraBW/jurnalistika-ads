@@ -52,6 +52,9 @@ export function NotificationPopover() {
     };
 
     const handleNotificationClick = (notification: Notification) => {
+        console.log('notification', notification);
+
+
         if (!notification.isRead) {
             handleMarkRead(notification.id);
         }

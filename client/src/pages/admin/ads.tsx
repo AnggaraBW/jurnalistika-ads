@@ -20,6 +20,12 @@ export default function AdminAds() {
     queryKey: ["/api/ads/all"],
   });
 
+  const isNew = (date: string | Date) => {
+    const created = new Date(date);
+    const now = new Date();
+    return (now.getTime() - created.getTime()) < (24 * 60 * 60 * 1000);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -168,6 +174,11 @@ export default function AdminAds() {
                           </div>
                           <div className="flex items-center space-x-3">
                             {getStatusBadge(ad.status)}
+                            {ad.status === 'pending' && isNew(ad.createdAt) && (
+                              <Badge className="bg-blue-500 hover:bg-blue-600 border-none text-white animate-pulse">
+                                New
+                              </Badge>
+                            )}
                             <span className="text-sm text-muted-foreground">
                               Views: {ad.currentViews.toLocaleString("id-ID")}
                             </span>
