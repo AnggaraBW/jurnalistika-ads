@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { registerRoutes } from "../server/routes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,10 +28,12 @@ async function createApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true }));
 
+  await registerRoutes(app);
+
   // Request logging middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
     const originalJson = res.json;
-    res.json = function(body) {
+    res.json = function (body) {
       console.log(`${req.method} ${req.path} - Response:`, body);
       return originalJson.call(this, body);
     };
@@ -76,7 +79,7 @@ async function createApp() {
           '.gif': 'image/gif',
           '.svg': 'image/svg+xml',
         };
-        
+
         const mimeType = mimeTypes[ext] || 'application/octet-stream';
         res.setHeader('Content-Type', mimeType);
         res.sendFile(filePath);
@@ -125,7 +128,7 @@ async function createApp() {
   // Error handling middleware (must be last)
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error("Error occurred:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Internal server error",
       error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
     });
@@ -141,7 +144,7 @@ export default async function handler(req: any, res: any) {
     return app(req, res);
   } catch (error) {
     console.error("Handler error:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: "Server initialization failed",
       error: error instanceof Error ? error.message : 'Unknown error'
     });
