@@ -19,7 +19,7 @@ import {
   type UpdateAdSlot,
   type Notification,
   type InsertNotification,
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, sql, desc, count, inArray } from "drizzle-orm";
 

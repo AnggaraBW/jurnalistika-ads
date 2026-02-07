@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema, updateAdSlotSchema } from "@shared/schema";
+import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema, updateAdSlotSchema } from "../shared/schema";
 import { put } from "@vercel/blob";
 
 export async function registerRoutes(app: Express): Promise<Server> {
