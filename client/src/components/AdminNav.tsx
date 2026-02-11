@@ -8,7 +8,8 @@ export default function AdminNav() {
   const { user } = useAuth();
 
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    window.location.href =
+      '/api/logout';
   };
 
   return (
