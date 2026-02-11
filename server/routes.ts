@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema, updateAdSlotSchema } from "../shared/schema";
+import { insertAdSchema, updateAdStatusSchema, insertAdSlotSchema, updateAdSlotSchema, insertAdTypeSchema, updateAdSchema } from "../shared/schema";
 import { put } from "@vercel/blob";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -89,6 +89,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Ad Type endpoints
+  app.get("/api/ad-types", isAuthenticated, async (req, res) => {
+    try {
+      const types = await storage.getAdTypes();
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching ad types:", error);
+      res.status(500).json({ message: "Failed to fetch ad types" });
+    }
+  });
+
+  app.post("/api/ad-types", isAuthenticated, async (req: any, res) => {
+    const user = await storage.getUser(req.user.id);
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden: Admin only" });
+    }
+    try {
+      console.log(req.body);
+      const validatedData = insertAdTypeSchema.parse(req.body);
+      const type = await storage.createAdType(validatedData);
+      res.json(type);
+    } catch (error) {
+      console.error("Error creating ad type:", error);
+      res.status(400).json({ message: "Invalid ad type data" });
+    }
+  });
+
+  app.delete("/api/ad-types/:id", isAuthenticated, async (req: any, res) => {
+    const user = await storage.getUser(req.user.id);
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden: Admin only" });
+    }
+    try {
+      await storage.deleteAdType(req.params.id);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting ad type:", error);
+      res.status(500).json({ message: "Failed to delete ad type" });
+    }
+  });
+
   // Ad Slot endpoints
   app.get("/api/ad-slots", isAuthenticated, async (req, res) => {
     try {
@@ -153,7 +194,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/ad-slots")
+  app.delete("/api/ad-slots/:id", isAuthenticated, async (req: any, res) => {
+    const user = await storage.getUser(req.user.id);
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden: Admin only" });
+    }
+    try {
+      await storage.deleteAdSlot(req.params.id);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting ad slot:", error);
+      res.status(500).json({ message: "Failed to delete ad slot" });
+    }
+  });
 
   // Ad endpoints
   app.post("/api/ads", isAuthenticated, async (req: any, res) => {
@@ -373,6 +426,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching ad:", error);
       res.status(500).json({ message: "Failed to fetch ad" });
+    }
+  });
+
+  app.patch("/api/ads/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const adId = req.params.id;
+      const userId = req.user.id;
+
+      // Check ownership or admin
+      const existingAd = await storage.getAdById(adId);
+      if (!existingAd) {
+        return res.status(404).json({ message: "Ad not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (existingAd.advertiserId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const validatedData = updateAdSchema.parse(req.body);
+
+      // Handle image upload ACL if present (e.g. for payment proof)
+      if (req.body.paymentProofUrl) {
+        const objectStorageService = new ObjectStorageService();
+        const normalizedPath = await objectStorageService.trySetObjectEntityAclPolicy(
+          req.body.paymentProofUrl,
+          {
+            owner: userId,
+            visibility: "private", // Payment proof should be private or admin-only
+          }
+        );
+        validatedData.paymentProofUrl = normalizedPath;
+
+        // Notify admins about the payment proof upload
+        const admins = await storage.getAdmins();
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            adId: adId,
+            title: "Bukti Pembayaran Diupload",
+            message: `Advertiser telah mengupload bukti pembayaran untuk iklan "${existingAd.title}". Mohon dicek.`,
+            type: "info"
+          });
+        }
+
+        // If ad was rejected, maybe set it back to pending? Or keep as is.
+        // For now, we trust the notification is enough.
+      }
+
+      const updatedAd = await storage.updateAd(adId, validatedData);
+      res.json(updatedAd);
+
+    } catch (error) {
+      console.error("Error updating ad:", error);
+      res.status(400).json({ message: "Invalid ad data" });
     }
   });
 

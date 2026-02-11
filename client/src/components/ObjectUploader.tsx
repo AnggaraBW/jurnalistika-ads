@@ -94,8 +94,9 @@ export function ObjectUploader({
       .use(ImageEditor, {
         quality: 0.9,
         cropperOptions: {
-          aspectRatio: 300 / 250,
-          // aspectRatio: 16 / 9, // Forces the banner ratio
+          aspectRatio: adType && aspectRatioObj[adType as keyof typeof aspectRatioObj]
+            ? aspectRatioObj[adType as keyof typeof aspectRatioObj]
+            : undefined,
           viewMode: 1, // Restricts crop box to within image boundaries
           autoCropArea: 1, // Makes the crop box cover the whole image initially
           responsive: true,
@@ -115,10 +116,8 @@ export function ObjectUploader({
   // Listen for the modal closed event
   uppy.on("dashboard:modal-closed", () => {
     console.log("Dashboard modal was closed. Resetting Uppy...");
-    uppy.reset(); // This removes all files from the state
+    uppy.cancelAll(); // This removes all files from the state
   });
-
-  console.log(aspectRatioObj[adType]);
 
   return (
     <div className="flex justify-center items-center w-full">

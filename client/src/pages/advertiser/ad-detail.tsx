@@ -1,6 +1,7 @@
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AdWithRelations } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -12,15 +13,22 @@ import {
   FaDollarSign,
   FaEye,
   FaCalendar,
+  FaUpload,
 } from "react-icons/fa";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
 import AdvertiserNav from "@/components/AdvertiserNav";
 import { useToast } from "@/hooks/use-toast";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
+import { PutBlobResult } from "@vercel/blob";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdvertiserAdDetail() {
   const params = useParams();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: ad, isLoading } = useQuery<AdWithRelations>({
     queryKey: ["/api/ads/", params.id],
     queryFn: async () => {
@@ -30,7 +38,64 @@ export default function AdvertiserAdDetail() {
     },
   });
 
-  console.table(ad);
+  const updateAdMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PATCH", `/api/ads/${params.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ads/", params.id] });
+      toast({
+        title: "Berhasil",
+        description: "Bukti pembayaran berhasil diupload",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: error.message,
+      });
+    },
+  });
+
+  const handleGetUploadParameters = async (file: any) => {
+    const safeFileName = (file?.name ?? "").trim() || `payment-proof-${Date.now()}`;
+    const query = new URLSearchParams({ filename: safeFileName });
+    return `/api/blob/upload?${query.toString()}`;
+  };
+
+  const handleUploadComplete = (
+    result: UploadResult<Record<string, unknown>, Record<string, unknown>>
+  ) => {
+    if (!result.successful || result.successful.length === 0) {
+      toast({
+        title: "Gagal",
+        description: "Upload gambar gagal. Silakan coba lagi.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const successfulFile = result.successful[0] as any;
+    const responseBody = successfulFile?.response?.body as
+      | PutBlobResult
+      | undefined;
+    const blobUrl = responseBody?.url || successfulFile?.uploadURL;
+
+    if (!blobUrl) {
+      toast({
+        title: "Gagal",
+        description: "Tidak dapat mendapatkan URL gambar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateAdMutation.mutate({ paymentProofUrl: blobUrl });
+  };
+
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -301,16 +366,66 @@ export default function AdvertiserAdDetail() {
                       <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">Klik untuk menyalin</span>
                     </p>
                     <p className="text-2xl font-mono font-extrabold tracking-widest select-all">
-                      {ad.id.toUpperCase()}
+                      {"0102448790001"}
                     </p>
                   </div>
 
                   <p className="mt-3 text-xs text-primary-foreground/80 font-medium">
-                    *Mohon sertakan nomor transaksi ini saat melakukan transfer
+                    *Nomor rekening Mandiri atas nama Jurnalistika
                   </p>
                 </div>
               )}
             </Card>
+
+            {ad.status === "approved" || ad.status === "active" || ad.status === "pending" ? (
+              <Card className="p-6 mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  Upload Bukti Pembayaran
+                </h3>
+
+                {ad.paymentProofUrl ? (
+                  <div className="border rounded-lg p-4 bg-muted/20">
+                    <div className="flex items-center gap-4 mb-4">
+                      <FaCheckCircle className="text-green-500 text-xl" />
+                      <div>
+                        <p className="font-semibold text-foreground">Bukti Pembayaran Terkirim</p>
+                        <p className="text-sm text-muted-foreground">Anda telah mengupload bukti pembayaran.</p>
+                      </div>
+                    </div>
+                    <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden max-w-sm mx-auto border cursor-pointer hover:opacity-90 transition-opacity" onClick={() => ad.paymentProofUrl && window.open(ad.paymentProofUrl, '_blank')}>
+                      <img
+                        src={ad.paymentProofUrl}
+                        alt="Bukti Pembayaran"
+                        className="w-full h-full object-contain"
+                      />
+                    </AspectRatio>
+                    <div className="mt-4 text-center">
+                      <Button variant="outline" size="sm" onClick={() => ad.paymentProofUrl && window.open(ad.paymentProofUrl, '_blank')}>
+                        Lihat Full Size
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ObjectUploader
+                    adType="generic"
+                    maxNumberOfFiles={1}
+                    maxFileSize={5242880} // 5MB
+                    onGetUploadParameters={handleGetUploadParameters}
+                    onComplete={handleUploadComplete}
+                    buttonClassName="w-full"
+                    buttonVariant="unstyled"
+                  >
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer group hover:bg-muted/50">
+                      <div className="w-12 h-12 bg-muted group-hover:bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 transition-colors">
+                        <FaUpload className="text-2xl text-gray-400 group-hover:text-primary transition-colors" />
+                      </div>
+                      <p className="text-gray-600 font-medium group-hover:text-foreground">Klik untuk upload bukti pembayaran</p>
+                      <p className="text-sm text-gray-500">PNG, JPG, atau PDF (Max 5MB)</p>
+                    </div>
+                  </ObjectUploader>
+                )}
+              </Card>
+            ) : null}
 
             {/* Advertiser Info */}
             {/* {ad.advertiser && (

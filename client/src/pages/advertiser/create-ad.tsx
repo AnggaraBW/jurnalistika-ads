@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { AdSlot } from "@shared/schema";
+import type { AdSlot, AdType } from "@shared/schema";
 import AdvertiserNav from "@/components/AdvertiserNav";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import {
@@ -38,7 +38,7 @@ import {
 import type { PutBlobResult } from "@vercel/blob";
 
 const formSchema = z.object({
-  adType: z.enum(["banner", "sidebar", "inline", "popup"]),
+  adType: z.string().min(1, "Pilih jenis iklan"),
   paymentType: z.enum(["period", "view"]),
   slotIds: z.array(z.string()).min(1, "Pilih minimal 1 slot iklan"),
   title: z.string().min(3, "Judul minimal 3 karakter"),
@@ -62,7 +62,7 @@ export default function CreateAd() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      adType: "banner",
+      adType: "",
       paymentType: "period",
       slotIds: [],
       title: "",
@@ -76,6 +76,10 @@ export default function CreateAd() {
 
   const { data: slots = [] } = useQuery<AdSlot[]>({
     queryKey: ["/api/ad-slots/available"],
+  });
+
+  const { data: adTypes = [] } = useQuery<AdType[]>({
+    queryKey: ["/api/ad-types"],
   });
 
   const adType = form.watch("adType");
@@ -114,9 +118,19 @@ export default function CreateAd() {
   // Filter slots by ad type and slot type filter
   const filteredSlots = slots.filter((slot) => {
     const matchesAdType = slot.adType === adType;
-    const matchesFilter =
-      slotTypeFilter === "all" || slot.adType === slotTypeFilter;
-    return matchesAdType && matchesFilter;
+    // Since we are filtering by adType in the form, the additional filter might be redundant 
+    // or should match the selected adType if 'all' is not selected.
+    // However, the UI has a separate filter on the right column. 
+    // If the right column filter is solely for viewing availability, we can keep it dynamic.
+
+    // For the main form selection (filteredSlots used in the middle column):
+    return matchesAdType;
+  });
+
+  // Filter for the right sidebar availability view
+  const sidebarFilteredSlots = slots.filter((slot) => {
+    if (slotTypeFilter === "all") return true;
+    return slot.adType === slotTypeFilter;
   });
 
   // Calculate stepper progress
@@ -386,50 +400,25 @@ export default function CreateAd() {
                             defaultValue={field.value}
                             className="grid sm:grid-cols-2 gap-4"
                           >
-                            {[
-                              {
-                                value: "banner",
-                                label: "Banner",
-                                icon: FaAd,
-                                desc: "Iklan horizontal di bagian atas atau bawah halaman",
-                              },
-                              {
-                                value: "sidebar",
-                                label: "Sidebar",
-                                icon: FaAd,
-                                desc: "Iklan vertikal di sisi kanan halaman",
-                              },
-                              {
-                                value: "inline",
-                                label: "Inline Article",
-                                icon: FaAd,
-                                desc: "Iklan di tengah konten artikel",
-                              },
-                              {
-                                value: "popup",
-                                label: "Pop-up",
-                                icon: FaAd,
-                                desc: "Iklan yang muncul di atas konten",
-                              },
-                            ].map((type) => (
-                              <FormItem key={type.value}>
+                            {adTypes?.map((type) => (
+                              <FormItem key={type.id}>
                                 <FormControl>
                                   <label className="relative cursor-pointer block">
                                     <RadioGroupItem
-                                      value={type.value}
+                                      value={type.name}
                                       className="sr-only peer"
                                     />
                                     <div className="p-4 border-2 border-border rounded-lg peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/50 transition-all">
                                       <div className="flex items-start space-x-3">
                                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                          <type.icon className="text-primary" />
+                                          <FaAd className="text-primary" />
                                         </div>
                                         <div>
                                           <h4 className="font-semibold text-foreground mb-1">
-                                            {type.label}
+                                            {type.name}
                                           </h4>
                                           <p className="text-sm text-muted-foreground">
-                                            {type.desc}
+                                            {type.description}
                                           </p>
                                         </div>
                                       </div>
@@ -569,8 +558,8 @@ export default function CreateAd() {
                                           const newValue = checked
                                             ? [...(field.value || []), slot.id]
                                             : (field.value || []).filter(
-                                                (id) => id !== slot.id
-                                              );
+                                              (id) => id !== slot.id
+                                            );
                                           field.onChange(newValue);
                                         }}
                                         data-testid={`checkbox-slot-${slot.id}`}
@@ -586,15 +575,15 @@ export default function CreateAd() {
                                             <p className="text-xs text-muted-foreground">
                                               {paymentType === "period"
                                                 ? `Rp ${parseFloat(
-                                                    slot.pricePerDay
-                                                  ).toLocaleString(
-                                                    "id-ID"
-                                                  )}/hari`
+                                                  slot.pricePerDay
+                                                ).toLocaleString(
+                                                  "id-ID"
+                                                )}/hari`
                                                 : `Rp ${parseFloat(
-                                                    slot.pricePerView
-                                                  ).toLocaleString(
-                                                    "id-ID"
-                                                  )}/view`}
+                                                  slot.pricePerView
+                                                ).toLocaleString(
+                                                  "id-ID"
+                                                )}/view`}
                                             </p>
                                           </div>
                                           {slot.isAvailable ? (
@@ -688,22 +677,13 @@ export default function CreateAd() {
                         Ukuran yang Disarankan:
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                        <div>
-                          <FaCheck className="inline text-primary mr-1" />{" "}
-                          Banner: 728x90 px
-                        </div>
-                        <div>
-                          <FaCheck className="inline text-primary mr-1" />{" "}
-                          Sidebar: 300x250 px
-                        </div>
-                        <div>
-                          <FaCheck className="inline text-primary mr-1" />{" "}
-                          Inline: 336x280 px
-                        </div>
-                        <div>
-                          <FaCheck className="inline text-primary mr-1" />{" "}
-                          Pop-up: 480x320 px
-                        </div>
+                        {adTypes.map((type) => (
+                          <div key={type.id}>
+                            <FaCheck className="inline text-primary mr-1" />{" "}
+                            {type.name}
+                            {type.width && type.height ? `: ${type.width}x${type.height} px` : ""}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -904,8 +884,8 @@ export default function CreateAd() {
                     {createAdMutation.isPending
                       ? "Mengirim..."
                       : hasDateConflict
-                      ? "Tanggal Tidak Tersedia"
-                      : "Submit Iklan"}
+                        ? "Tanggal Tidak Tersedia"
+                        : "Submit Iklan"}
                     <FaArrowRight className="ml-2" />
                   </Button>
                 </div>
@@ -925,34 +905,27 @@ export default function CreateAd() {
                     className="mb-4"
                   >
                     <TabsList
-                      className="grid w-full grid-cols-5"
+                      className="flex w-full overflow-x-auto justify-start"
                       data-testid="tabs-slot-filter"
                     >
-                      <TabsTrigger value="all" data-testid="tab-all">
+                      <TabsTrigger value="all" className="flex-shrink-0">
                         Semua
                       </TabsTrigger>
-                      <TabsTrigger value="banner" data-testid="tab-banner">
-                        Banner
-                      </TabsTrigger>
-                      <TabsTrigger value="sidebar" data-testid="tab-sidebar">
-                        Sidebar
-                      </TabsTrigger>
-                      <TabsTrigger value="inline" data-testid="tab-inline">
-                        Inline
-                      </TabsTrigger>
-                      <TabsTrigger value="popup" data-testid="tab-popup">
-                        Popup
-                      </TabsTrigger>
+                      {adTypes.map(type => (
+                        <TabsTrigger key={type.id} value={type.name} className="flex-shrink-0 capitalize">
+                          {type.name}
+                        </TabsTrigger>
+                      ))}
                     </TabsList>
                   </Tabs>
 
                   <div className="space-y-3">
-                    {filteredSlots.length === 0 ? (
+                    {sidebarFilteredSlots.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         Tidak ada slot tersedia untuk jenis iklan ini
                       </p>
                     ) : (
-                      filteredSlots.map((slot: any) => (
+                      sidebarFilteredSlots.map((slot: any) => (
                         <div
                           key={slot.id}
                           className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"

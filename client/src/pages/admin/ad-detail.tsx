@@ -2,6 +2,7 @@ import AdminNav from "@/components/AdminNav";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AdWithRelations, updateAdStatusSchema } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -348,6 +349,34 @@ export default function AdminAdDetail() {
                   </p>
                 </div>
               </div>
+            </Card>
+
+            {/* Payment Proof */}
+            <Card className="p-6 mb-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Bukti Pembayaran
+              </h3>
+              {ad.paymentProofUrl ? (
+                <div className="border rounded-lg p-4 bg-muted/20">
+                  <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden max-w-sm mx-auto border cursor-pointer hover:opacity-90 transition-opacity" onClick={() => ad.paymentProofUrl && window.open(ad.paymentProofUrl, '_blank')}>
+                    <img
+                      src={ad.paymentProofUrl}
+                      alt="Bukti Pembayaran"
+                      className="w-full h-full object-contain"
+                    />
+                  </AspectRatio>
+                  <div className="mt-4 text-center">
+                    <Button variant="outline" size="sm" onClick={() => ad.paymentProofUrl && window.open(ad.paymentProofUrl, '_blank')}>
+                      Lihat Full Size
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center border-2 border-dashed border-muted rounded-lg">
+                  <FaExclamationCircle className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground font-medium">Belum ada bukti pembayaran yang diupload</p>
+                </div>
+              )}
             </Card>
 
             {/* Advertiser Info */}

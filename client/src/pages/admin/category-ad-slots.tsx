@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, ArrowLeft } from "lucide-react";
+import { Plus, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import AdminNav from "@/components/AdminNav";
 import {
     Table,
@@ -21,6 +21,17 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
     Form,
     FormControl,
@@ -111,6 +122,27 @@ export default function AdminAdSlotsList() {
     const onSubmit = (data: InsertAdSlot) => {
         mutation.mutate(data);
     };
+
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await apiRequest("DELETE", `/api/ad-slots/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/ad-slots"] });
+            toast({
+                title: "Berhasil",
+                description: "Slot iklan berhasil dihapus",
+            });
+        },
+        onError: (error: Error) => {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: "Gagal",
+                description: error.message,
+            });
+        },
+    });
 
     const handleAdd = () => {
         setSelectedSlot(null);
@@ -319,6 +351,7 @@ export default function AdminAdSlotsList() {
                                         <TableHead>Harga/Hari</TableHead>
                                         <TableHead>Harga/View</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -337,6 +370,32 @@ export default function AdminAdSlotsList() {
                                                 <Badge variant={slot.isAvailable ? "default" : "secondary"}>
                                                     {slot.isAvailable ? "Tersedia" : "Tidak Tersedia"}
                                                 </Badge>
+                                            </TableCell>
+                                            <TableCell onClick={(e) => e.stopPropagation()}>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/90">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Hapus Slot Iklan?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Tindakan ini tidak dapat dibatalkan. Slot iklan ini akan dihapus permanen.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => deleteMutation.mutate(slot.id)}
+                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                            >
+                                                                Hapus
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}

@@ -30,7 +30,8 @@ export const sessions = pgTable(
 export const userRoleEnum = pgEnum('user_role', ['advertiser', 'admin']);
 
 // Ad type enum
-export const adTypeEnum = pgEnum('ad_type', ['banner', 'sidebar', 'inline', 'popup']);
+// Ad Type enum removed in favor of dynamic ad_types table
+// export const adTypeEnum = pgEnum('ad_type', ['banner', 'sidebar', 'inline', 'popup']);
 
 // Payment type enum
 export const paymentTypeEnum = pgEnum('payment_type', ['period', 'view']);
@@ -59,11 +60,24 @@ export const usersRelations = relations(users, ({ many }) => ({
   ads: many(ads),
 }));
 
+// Ad Types table
+export const adTypes = pgTable("ad_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // Display name e.g. "Banner"
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  isActive: integer("is_active").notNull().default(1), // 1 = active, 0 = inactive (soft delete)
+  width: integer("width"), // Optional dimensions
+  height: integer("height"), // Optional dimensions
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Ad slots table
 export const adSlots = pgTable("ad_slots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
-  adType: adTypeEnum("ad_type").notNull(),
+  adType: varchar("ad_type").notNull(), // References adTypes.name (slug) or id. Using string for flexibility
   position: slotPositionEnum("position").notNull(),
   location: varchar("location").notNull(), // e.g., "homepage", "article"
   isAvailable: integer("is_available").notNull().default(1), // 1 = available, 0 = not available
@@ -82,13 +96,14 @@ export const ads = pgTable("ads", {
   advertiserId: varchar("advertiser_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: varchar("title").notNull(),
   imageUrl: varchar("image_url"),
-  adType: adTypeEnum("ad_type").notNull(),
+  adType: varchar("ad_type").notNull(),
   paymentType: paymentTypeEnum("payment_type").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   budget: decimal("budget", { precision: 12, scale: 2 }).notNull(),
   targetViews: integer("target_views"),
   currentViews: integer("current_views").notNull().default(0),
+  paymentProofUrl: varchar("payment_proof_url"),
   status: adStatusEnum("status").notNull().default('pending'),
   estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }).notNull(),
   actualCost: decimal("actual_cost", { precision: 12, scale: 2 }).default('0'),
@@ -240,6 +255,21 @@ export const updateAdSlotSchema = createInsertSchema(adSlots).omit({
   location: z.string().min(1, "Location is required"),
 });
 
+export const updateAdSchema = createInsertSchema(ads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  currentViews: true,
+  actualCost: true,
+}).partial();
+
+
+export const insertAdTypeSchema = createInsertSchema(adTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -255,6 +285,9 @@ export type UpdateAdStatus = z.infer<typeof updateAdStatusSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type UpdateAdSlot = z.infer<typeof updateAdSlotSchema>;
+export type UpdateAd = z.infer<typeof updateAdSchema>;
+export type AdType = typeof adTypes.$inferSelect;
+export type InsertAdType = z.infer<typeof insertAdTypeSchema>;
 
 // Extended types with relations
 export type AdWithRelations = Ad & {

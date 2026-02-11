@@ -19,6 +19,10 @@ import {
   type UpdateAdSlot,
   type Notification,
   type InsertNotification,
+  adTypes,
+  type AdType,
+  type InsertAdType,
+  type UpdateAd,
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, sql, desc, count, inArray } from "drizzle-orm";
@@ -35,6 +39,7 @@ export interface IStorage {
   createAdSlot(slot: InsertAdSlot): Promise<AdSlot>;
   updateAdSlot(id: string, slot: UpdateAdSlot): Promise<AdSlot>;
   updateAdSlotAvailability(id: string, isAvailable: number): Promise<void>;
+  deleteAdSlot(id: string): Promise<void>;
 
   // Ad operations
   createAd(ad: InsertAd): Promise<Ad>;
@@ -43,6 +48,7 @@ export interface IStorage {
   getPendingAds(): Promise<AdWithRelations[]>;
   getActiveAds(): Promise<AdWithRelations[]>;
   getAllAds(): Promise<AdWithRelations[]>;
+  updateAd(id: string, ad: UpdateAd): Promise<Ad>;
   updateAdStatus(id: string, data: UpdateAdStatus): Promise<Ad>;
   updateAdViews(id: string, views: number): Promise<void>;
 
@@ -74,6 +80,11 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: string): Promise<void>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   getAdmins(): Promise<User[]>;
+
+  // Ad Type operations
+  getAdTypes(): Promise<AdType[]>;
+  createAdType(adType: InsertAdType): Promise<AdType>;
+  deleteAdType(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -130,6 +141,10 @@ export class DatabaseStorage implements IStorage {
     await db.update(adSlots).set({ isAvailable }).where(eq(adSlots.id, id));
   }
 
+  async deleteAdSlot(id: string): Promise<void> {
+    await db.delete(adSlots).where(eq(adSlots.id, id));
+  }
+
   // Ad operations
   async createAd(ad: InsertAd): Promise<Ad> {
     // Extract slotIds and create ad without it
@@ -149,6 +164,15 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newAd;
+  }
+
+  async updateAd(id: string, ad: UpdateAd): Promise<Ad> {
+    const [updatedAd] = await db
+      .update(ads)
+      .set({ ...ad, updatedAt: new Date() })
+      .where(eq(ads.id, id))
+      .returning();
+    return updatedAd;
   }
 
   async getAdById(id: string): Promise<AdWithRelations | undefined> {
@@ -535,6 +559,20 @@ export class DatabaseStorage implements IStorage {
 
   async getAdmins(): Promise<User[]> {
     return await db.select().from(users).where(eq(users.role, 'admin'));
+  }
+
+  // Ad Type operations
+  async getAdTypes(): Promise<AdType[]> {
+    return await db.select().from(adTypes).where(eq(adTypes.isActive, 1));
+  }
+
+  async createAdType(adType: InsertAdType): Promise<AdType> {
+    const [newType] = await db.insert(adTypes).values(adType).returning();
+    return newType;
+  }
+
+  async deleteAdType(id: string): Promise<void> {
+    await db.update(adTypes).set({ isActive: 0 }).where(eq(adTypes.id, id));
   }
 }
 
