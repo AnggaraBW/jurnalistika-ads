@@ -9,11 +9,7 @@
   "functions": {
     "api/bundled.ts": {
       "maxDuration": 30,
-      "includeFiles": [
-        "server/**",
-        "shared/**",
-        ".env"
-      ]
+      "includeFiles": "{server/**,shared/**,.env}"
     }
   }
 }
